@@ -1,0 +1,24 @@
+# API Keys - Replace with your actual keys
+api_keys:
+  noaa_cdo: "CiulaYXmbEBqtdKkwTBkgUNWkMrTFHKa"
+  eia: "Er1DH6AWQuWRNOBY6ijBIlGuOXWk7XR3din5lCFZ"
+
+# List of cities and their corresponding EIA region series IDs
+# You can find more EIA series IDs here: https://www.eia.gov/opendata/browser/electricity/rto/region-data
+# NOAA Station IDs can be found here: https://www.ncdc.noaa.gov/cdo-web/findstation
+cities:
+  - name: "New York"
+    noaa_station_id: "GHCND:USW00094728" # NYC Central Park
+    eia_series_id: "EBA.NY-ALL.D"
+  - name: "Chicago"
+    noaa_station_id: "GHCND:USW00094846" # Chicago O'Hare Airport
+    eia_series_id: "EBA.PJM-ALL.D" # Using PJM for the broader region
+  - name: "Houston"
+    noaa_station_id: "GHCND:USW00012960" # Houston Intercontinental Airport
+    eia_series_id: "EBA.ERCO-ALL.D"
+  - name: "Phoenix"
+    noaa_station_id: "GHCND:USW00023183" # Phoenix Sky Harbor Airport
+    eia_series_id: "EBA.AZPS-ALL.D"
+  - name: "Seattle"
+    noaa_station_id: "GHCND:USW00024233" # Seattle-Tacoma Airport
+    eia_series_id: "EBA.BPA-ALL.D"

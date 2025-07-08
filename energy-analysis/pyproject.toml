@@ -1,0 +1,13 @@
+[project]
+name = "energy-weather-pipeline"
+version = "0.1.0"
+description = "A data pipeline to fetch weather and energy consumption data."
+dependencies = [
+    "requests",
+    "pandas",
+    "PyYAML",
+]
+
+[tool.uv]
+# This section is for the 'uv' package installer.
+# You can install dependencies via: uv pip install -e .
