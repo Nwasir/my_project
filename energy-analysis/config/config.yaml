@@ -10,15 +10,35 @@ cities:
   - name: "New York"
     noaa_station_id: "GHCND:USW00094728" # NYC Central Park
     eia_series_id: "EBA.NY-ALL.D"
+    latitude: 40.7811
+    longitude: -73.9667
   - name: "Chicago"
     noaa_station_id: "GHCND:USW00094846" # Chicago O'Hare Airport
     eia_series_id: "EBA.PJM-ALL.D" # Using PJM for the broader region
+    latitude: 41.9742
+    longitude: -87.9073
   - name: "Houston"
     noaa_station_id: "GHCND:USW00012960" # Houston Intercontinental Airport
     eia_series_id: "EBA.ERCO-ALL.D"
+    latitude: 29.9902
+    longitude: -95.3368
   - name: "Phoenix"
     noaa_station_id: "GHCND:USW00023183" # Phoenix Sky Harbor Airport
     eia_series_id: "EBA.AZPS-ALL.D"
+    latitude: 33.4373
+    longitude: -112.0079
   - name: "Seattle"
     noaa_station_id: "GHCND:USW00024233" # Seattle-Tacoma Airport
     eia_series_id: "EBA.BPA-ALL.D"
+    latitude: 47.4435
+    longitude: -122.3012
+
+# Data Quality Parameters
+data_quality:
+  max_days_old: 3
+  outlier_thresholds:
+    temp_celsius:
+      max: 55
+      min: -45
+    energy_mwh:
+      min: 0

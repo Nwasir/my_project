@@ -1,11 +1,35 @@
 import logging
 import os
-from datetime import datetime, timedelta
+import time
+from datetime import datetime, timedelta, timezone
+from functools import wraps
+from typing import Tuple
 
 import pandas as pd
 import requests
 import yaml
 
+
+def retry_with_backoff(retries=5, initial_delay=1, backoff_factor=2):
+    """
+    A decorator for retrying a function with exponential backoff.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = initial_delay
+            for i in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except requests.exceptions.RequestException as e:
+                    logging.warning(f"API request failed: {e}. Retrying in {delay}s... ({i+1}/{retries})")
+                    time.sleep(delay)
+                    delay *= backoff_factor
+            logging.error(f"Function {func.__name__} failed after {retries} retries.")
+            # Return an empty list to allow the pipeline to continue
+            return []
+        return wrapper
+    return decorator
 
 def load_config():
     """Loads the configuration from config/config.yaml."""
@@ -29,11 +53,14 @@ class DataFetcher:
         self.config = load_config()
         self.noaa_api_key = self.config['api_keys']['noaa_cdo']
         self.eia_api_key = self.config['api_keys']['eia']
+        self.noaa_url = self.config['api_urls']['noaa_cdo']
+        self.eia_url = self.config['api_urls']['eia']
         self.cities = self.config['cities']
         self.session = requests.Session() # Use a session for connection pooling
         # Set the NOAA token in the header for all requests in this session
         self.session.headers.update({'token': self.noaa_api_key})
 
+    @retry_with_backoff()
     def fetch_weather_data(self, city: dict, start_date: str, end_date: str) -> list:
         """
         Fetches daily high/low temperature from NOAA CDO for a specific city and date range.
@@ -41,8 +68,6 @@ class DataFetcher:
         city_name = city['name']
         station_id = city['noaa_station_id']
         logging.info(f"Fetching weather for {city_name} ({station_id}) from {start_date} to {end_date}...")
-
-        weather_url = "https://www.ncei.noaa.gov/cdo-web/api/v2/data"
         params = {
             'datasetid': 'GHCND',
             'stationid': station_id,
@@ -54,7 +79,7 @@ class DataFetcher:
         }
 
         try:
-            response = self.session.get(weather_url, params=params)
+            response = self.session.get(self.noaa_url, params=params)
             response.raise_for_status()
             data = response.json().get('results', [])
             if not data:
@@ -86,6 +111,7 @@ class DataFetcher:
             logging.error(f"Failed to parse weather data for {city_name}: {e}")
         return []
 
+    @retry_with_backoff()
     def fetch_energy_data(self, city: dict, start_date: str, end_date: str) -> list:
         """
         Fetches daily energy consumption data for a given region and date range from EIA.
@@ -94,7 +120,6 @@ class DataFetcher:
         city_name = city['name']
         logging.info(f"Fetching energy data for {city_name} ({series_id}) from {start_date} to {end_date}...")
 
-        energy_url = "https://api.eia.gov/v2/electricity/rto/daily-region-data/data/"
         params = {
             "api_key": self.eia_api_key,
             "data[0]": "value",
@@ -106,8 +131,7 @@ class DataFetcher:
         }
 
         try:
-            # EIA API key must be in params, not headers
-            response = requests.get(energy_url, params=params)
+            response = self.session.get(self.eia_url, params=params)
             response.raise_for_status()
             data = response.json().get('response', {}).get('data', [])
             if not data:
@@ -131,10 +155,10 @@ class DataFetcher:
             logging.error(f"Failed to parse energy data for {city_name}: {e}")
         return []
 
-    def fetch_historical_data(self, days: int = 90) -> (list, list):
+    def fetch_historical_data(self, days: int = 90) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Fetches the last N days of historical data for all cities."""
         logging.info(f"--- Starting historical data fetch for the last {days} days ---")
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=days)
 
         # Format for APIs
@@ -152,6 +176,12 @@ class DataFetcher:
             energy_data = self.fetch_energy_data(city, start_date_str, end_date_str)
             if energy_data:
                 all_energy_data.extend(energy_data)
+            
+            time.sleep(0.2) # Add a small delay to be respectful of API rate limits (e.g., 5 req/sec)
 
         logging.info("--- Historical data fetch complete ---")
-        return all_weather_data, all_energy_data
+        
+        weather_df = pd.DataFrame(all_weather_data)
+        energy_df = pd.DataFrame(all_energy_data)
+
+        return weather_df, energy_df

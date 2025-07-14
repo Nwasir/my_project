@@ -3,9 +3,13 @@ name = "energy-weather-pipeline"
 version = "0.1.0"
 description = "A data pipeline to fetch weather and energy consumption data."
 dependencies = [
+    "streamlit",   
     "requests",
     "pandas",
     "PyYAML",
+    "plotly",
+    "scikit-learn",
+    "statsmodels",
 ]
 
 [tool.uv]

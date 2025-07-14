@@ -1,0 +1,43 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment
+.venv/
+venv/
+env/
+
+# Configuration - IMPORTANT
+# Keep sensitive API keys out of version control.
+config/config.yaml
+
+# Generated data and logs
+data/
+logs/
+
+# IDE / Editor specific
+.vscode/
+.idea/
+.DS_Store
