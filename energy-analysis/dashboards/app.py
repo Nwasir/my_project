@@ -87,7 +87,7 @@ if show_raw_data:
 # Visualization 1 – Geographic Overview
 st.header("📍 Geographic Overview")
 
-# Define all target cities and their lat/lon (fallback for missing data)
+# Define all target cities and their lat/lon
 city_info = pd.DataFrame([
     {"city": "New York", "latitude": 40.7128, "longitude": -74.0060},
     {"city": "Chicago", "latitude": 41.8781, "longitude": -87.6298},
