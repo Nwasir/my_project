@@ -7,11 +7,17 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 import numpy as np
 from datetime import datetime
+import os
 
 # Load processed data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data/processed/merged_2025-05-05_to_2025-08-03.csv", parse_dates=["date"])
+    # Get absolute path to this file's directory
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # Construct path to CSV relative to this file: ../data/processed/merged_2025-05-05_to_2025-08-03.csv
+    csv_path = os.path.join(base_dir, "..", "data", "processed", "merged_2025-05-05_to_2025-08-03.csv")
+
+    df = pd.read_csv(csv_path, parse_dates=["date"])
     df["dow"] = df["date"].dt.day_name()
     # Use the correct TMAX_F and TMIN_F columns
     tmax_col = next((col for col in df.columns if col.startswith("TMAX_F")), None)
@@ -59,8 +65,13 @@ if show_raw_data:
         except Exception:
             return pd.DataFrame()
 
-    weather_raw = try_load_csv("data/raw/weather_2025-05-06_to_2025-08-04.csv")
-    energy_raw = try_load_csv("data/raw/energy_2025-07-28_to_2025-08-04.csv")
+    # Construct absolute paths for raw data CSVs too
+    raw_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "raw")
+    weather_raw_path = os.path.join(raw_dir, "weather_2025-05-06_to_2025-08-04.csv")
+    energy_raw_path = os.path.join(raw_dir, "energy_2025-07-28_to_2025-08-04.csv")
+
+    weather_raw = try_load_csv(weather_raw_path)
+    energy_raw = try_load_csv(energy_raw_path)
 
     # Add temperature column if TMAX_F and TMIN_F exist
     if not weather_raw.empty and all(col in weather_raw.columns for col in ["TMAX_F", "TMIN_F"]):
@@ -71,8 +82,6 @@ if show_raw_data:
 
     with st.expander("📅 Weather Daily"):
         if not weather_raw.empty:
-            if "TMAX_F" in weather_raw.columns and "TMIN_F" in weather_raw.columns:
-                weather_raw["temperature"] = (weather_raw["TMAX_F"] + weather_raw["TMIN_F"]) / 2
             st.dataframe(weather_raw, use_container_width=True)
         else:
             st.warning("Weather daily data not found.")
