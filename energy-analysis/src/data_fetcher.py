@@ -8,180 +8,218 @@ from typing import Tuple
 import pandas as pd
 import requests
 import yaml
+from pathlib import Path
 
+# Load configuration from config.yaml
+config_path = Path(__file__).resolve().parent.parent / "config" / "config.yaml"
+with open(config_path, "r") as f:
+    config = yaml.safe_load(f)
 
-def retry_with_backoff(retries=5, initial_delay=1, backoff_factor=2):
-    """
-    A decorator for retrying a function with exponential backoff.
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            delay = initial_delay
-            for i in range(retries):
-                try:
-                    return func(*args, **kwargs)
-                except requests.exceptions.RequestException as e:
-                    logging.warning(f"API request failed: {e}. Retrying in {delay}s... ({i+1}/{retries})")
-                    time.sleep(delay)
-                    delay *= backoff_factor
-            logging.error(f"Function {func.__name__} failed after {retries} retries.")
-            # Return an empty list to allow the pipeline to continue
-            return []
-        return wrapper
-    return decorator
+# Define CITIES from config or as a constant list
+CITIES = config.get("cities", [
+    # Example:
+    # {"city": "New York", "eia_region_code": "NYIS"},
+    # {"city": "Chicago", "eia_region_code": "MISO"},
+])
 
-def load_config():
-    """Loads the configuration from config/config.yaml."""
-    config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'config.yaml')
-    try:
-        with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        logging.error(f"Configuration file not found at {config_path}")
-        raise
-    except yaml.YAMLError as e:
-        logging.error(f"Error parsing YAML file: {e}")
-        raise
+def fetch_noaa_weather(start_date, end_date, save_csv=True):
+    token = config["api_keys"]["noaa"]
+    datasetid = "GHCND"
+    url = "https://www.ncei.noaa.gov/cdo-web/api/v2/data"
+    all_data = []
 
+    for city_info in CITIES:
+        city = city_info["name"]
+        station_id = city_info["noaa_station_id"]
+        retries = 5
+        backoff = 3
 
-class DataFetcher:
-    """
-    A class to fetch data from weather and energy APIs.
-    """
-    def __init__(self):
-        self.config = load_config()
-        self.noaa_api_key = self.config['api_keys']['noaa_cdo']
-        self.eia_api_key = self.config['api_keys']['eia']
-        self.noaa_url = self.config['api_urls']['noaa_cdo']
-        self.eia_url = self.config['api_urls']['eia']
-        self.cities = self.config['cities']
-        self.session = requests.Session() # Use a session for connection pooling
-        # Set the NOAA token in the header for all requests in this session
-        self.session.headers.update({'token': self.noaa_api_key})
-
-    @retry_with_backoff()
-    def fetch_weather_data(self, city: dict, start_date: str, end_date: str) -> list:
-        """
-        Fetches daily high/low temperature from NOAA CDO for a specific city and date range.
-        """
-        city_name = city['name']
-        station_id = city['noaa_station_id']
-        logging.info(f"Fetching weather for {city_name} ({station_id}) from {start_date} to {end_date}...")
-        params = {
-            'datasetid': 'GHCND',
-            'stationid': station_id,
-            'startdate': start_date,
-            'enddate': end_date,
-            'datatypeid': 'TMAX,TMIN',
-            'units': 'metric',
-            'limit': 1000  # Max limit per request
-        }
-
-        try:
-            response = self.session.get(self.noaa_url, params=params)
-            response.raise_for_status()
-            data = response.json().get('results', [])
-            if not data:
-                logging.warning(f"No weather data returned for {city_name} for the specified period.")
-                return []
-
-            # Process the results, which come as a flat list, into a per-day structure
-            daily_temps = {}
-            for item in data:
-                day = item['date'].split('T')[0]
-                if day not in daily_temps:
-                    daily_temps[day] = {'city': city_name, 'date': day}
-                
-                if item['datatype'] == 'TMAX':
-                    daily_temps[day]['temp_high_c'] = item['value']
-                elif item['datatype'] == 'TMIN':
-                    daily_temps[day]['temp_low_c'] = item['value']
-            
-            # Filter out any days that don't have both TMIN and TMAX
-            processed_data = [
-                temps for temps in daily_temps.values() 
-                if 'temp_high_c' in temps and 'temp_low_c' in temps
-            ]
-            return processed_data
-
-        except requests.exceptions.RequestException as e:
-            logging.error(f"API request failed for weather in {city_name}: {e}")
-        except (KeyError, IndexError) as e:
-            logging.error(f"Failed to parse weather data for {city_name}: {e}")
-        return []
-
-    @retry_with_backoff()
-    def fetch_energy_data(self, city: dict, start_date: str, end_date: str) -> list:
-        """
-        Fetches daily energy consumption data for a given region and date range from EIA.
-        """
-        series_id = city['eia_series_id']
-        city_name = city['name']
-        logging.info(f"Fetching energy data for {city_name} ({series_id}) from {start_date} to {end_date}...")
-
-        params = {
-            "api_key": self.eia_api_key,
-            "data[0]": "value",
-            "facets[seriesId][]": series_id,
-            "start": start_date,
-            "end": end_date,
-            "sort[0][column]": "period",
-            "sort[0][direction]": "asc",
-        }
-
-        try:
-            response = self.session.get(self.eia_url, params=params)
-            response.raise_for_status()
-            data = response.json().get('response', {}).get('data', [])
-            if not data:
-                logging.warning(f"No energy data returned for {city_name} for the specified period.")
-                return []
-
-            # The API returns hourly data, so we format it
-            processed_data = [
-                {
-                    "city": city_name,
-                    "region_series_id": item['series-id'],
-                    "date": item['period'],
-                    "energy_consumption_mwh": item['value']
-                }
-                for item in data if item.get('value') is not None
-            ]
-            return processed_data
-        except requests.exceptions.RequestException as e:
-            logging.error(f"API request failed for energy data in {city_name}: {e}")
-        except (KeyError, IndexError) as e:
-            logging.error(f"Failed to parse energy data for {city_name}: {e}")
-        return []
-
-    def fetch_historical_data(self, days: int = 90) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """Fetches the last N days of historical data for all cities."""
-        logging.info(f"--- Starting historical data fetch for the last {days} days ---")
-        end_date = datetime.now(timezone.utc)
-        start_date = end_date - timedelta(days=days)
-
-        # Format for APIs
-        end_date_str = end_date.strftime('%Y-%m-%d')
-        start_date_str = start_date.strftime('%Y-%m-%d')
-
-        all_weather_data = []
-        all_energy_data = []
-
-        for city in self.cities:
-            weather_data = self.fetch_weather_data(city, start_date_str, end_date_str)
-            if weather_data:
-                all_weather_data.extend(weather_data)
-
-            energy_data = self.fetch_energy_data(city, start_date_str, end_date_str)
-            if energy_data:
-                all_energy_data.extend(energy_data)
-            
-            time.sleep(0.2) # Add a small delay to be respectful of API rate limits (e.g., 5 req/sec)
-
-        logging.info("--- Historical data fetch complete ---")
+        logging.info(f"Fetching NOAA weather for {city} from {start_date} to {end_date}")
         
-        weather_df = pd.DataFrame(all_weather_data)
-        energy_df = pd.DataFrame(all_energy_data)
+        for attempt in range(retries):
+            try:
+                params = {
+                    "datasetid": datasetid,
+                    "stationid": station_id,
+                    "startdate": start_date,
+                    "enddate": end_date,
+                    "limit": 1000,
+                    "units": "metric"
+                }
+                headers = {"token": token}
+                
+                response = requests.get(url, params=params, headers=headers, timeout=30)
 
-        return weather_df, energy_df
+                if response.status_code == 429:
+                    logging.warning(f"[{city}] NOAA rate limit hit. Backing off {backoff}s...")
+                    time.sleep(backoff)
+                    backoff *= 2
+                    continue
+
+                response.raise_for_status()
+
+                records = response.json().get("results", [])
+                if not records:
+                    logging.warning(f"[{city}] No weather records returned.")
+                    break
+
+                for r in records:
+                    if r["datatype"] in ["TMAX", "TMIN"]:
+                        all_data.append({
+                            "city": city,
+                            "date": r["date"][:10],
+                            "datatype": r["datatype"],
+                            "value": r["value"] / 10  # tenths of °C
+                        })
+
+                logging.info(f"[{city}] ✅ Weather data fetched successfully.")
+                break  # success, break out of retry loop
+
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as net_err:
+                logging.warning(f"[{city}] Network error: {net_err}. Retrying in {backoff}s...")
+                time.sleep(backoff)
+                backoff *= 2
+            except requests.exceptions.HTTPError as http_err:
+                logging.error(f"[{city}] HTTP error: {http_err}")
+                break
+            except Exception as e:
+                logging.error(f"[{city}] Unexpected error: {e}")
+                break
+        else:
+            logging.error(f"[{city}] ❌ All retry attempts failed.")
+
+    df = pd.DataFrame(all_data)
+    if df.empty:
+        logging.warning("⚠️ No NOAA weather data fetched at all.")
+        return df
+
+    pivot_df = df.pivot_table(index=["city", "date"], columns="datatype", values="value", aggfunc="first").reset_index()
+
+    if "TMAX" in pivot_df.columns:
+        pivot_df["TMAX_F"] = (pivot_df["TMAX"] * 0.18 + 32).round(2)
+        pivot_df.drop(columns="TMAX", inplace=True)
+    if "TMIN" in pivot_df.columns:
+        pivot_df["TMIN_F"] = (pivot_df["TMIN"] * 0.18 + 32).round(2)
+        pivot_df.drop(columns="TMIN", inplace=True)
+
+    if "Avg_temp" in pivot_df.columns:
+        pivot_df.drop(columns="Avg_temp", inplace=True)
+
+    if save_csv:
+        out_dir = Path("data/raw/")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"weather_{start_date}_to_{end_date}.csv"
+        filepath = out_dir / filename
+        pivot_df.to_csv(filepath, index=False)
+        logging.info(f"✅ NOAA weather data saved to {filepath}")
+
+    return pivot_df
+
+
+
+def fetch_eia_energy(start_date, end_date, save_csv=True):
+    token = config["api_keys"]["eia"]
+    all_data = []
+
+    for city_info in CITIES:
+        city = city_info["name"]
+        retries = 5
+        backoff = 1
+
+        if city.lower() == "houston":
+            logging.info("🔁 Using monthly retail-sales endpoint for Houston.")
+            base_url = "https://api.eia.gov/v2/electricity/retail-sales/data/"
+            sector = "ALL"  # You may specify 'RES', 'COM', 'IND', etc. if needed
+
+            params = {
+                "api_key": token,
+                "frequency": "monthly",
+                "data[0]": "sales",
+                "facets[stateid][]": "TX",
+                "facets[sectorid][]": sector,
+                "start": start_date[:7],  # yyyy-mm
+                "end": end_date[:7]
+            }
+        else:
+            base_url = "https://api.eia.gov/v2/electricity/rto/daily-region-data/data/"
+            region_code = city_info["eia_region_code"]
+
+            params = {
+                "api_key": token,
+                "frequency": "daily",
+                "data[0]": "value",
+                "facets[respondent][]": region_code,
+                "start": start_date,
+                "end": end_date
+            }
+
+        while retries > 0:
+            try:
+                response = requests.get(base_url, params=params, timeout=30)
+
+                if response.status_code == 429:
+                    logging.warning(f"EIA rate limit hit for {city}. Retrying in {backoff} seconds...")
+                    time.sleep(backoff)
+                    retries -= 1
+                    backoff *= 2
+                    continue
+
+                response.raise_for_status()
+                records = response.json().get("response", {}).get("data", [])
+
+                if not records:
+                    logging.warning(f"No EIA data returned for {city} from {start_date} to {end_date}")
+
+                for r in records:
+                    period = r.get("period", "")[:10]
+                    value = r.get("value", r.get("sales"))
+
+                    all_data.append({
+                        "city": city,
+                        "date": period,
+                        "energy_usage": value
+                    })
+
+                break  # success
+
+            except Exception as e:
+                logging.error(f"Failed to fetch EIA data for {city}: {e}")
+                break
+
+    df = pd.DataFrame(all_data)
+
+    if save_csv:
+        out_dir = Path("data/raw/")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"energy_{start_date}_to_{end_date}.csv"
+        filepath = out_dir / filename
+
+        if not df.empty:
+            df = df[["city", "date", "energy_usage"]]
+            df.to_csv(filepath, index=False)
+            logging.info(f"✅ Saved EIA energy data to {filepath}")
+        else:
+            logging.warning("⚠️ EIA energy DataFrame is empty. Nothing was saved.")
+
+    if not df.empty:
+        successful_cities = df["city"].unique()
+        logging.info(f"✅ Successfully fetched data for: {list(successful_cities)}")
+    else:
+        logging.warning("⚠️ No data fetched for any city.")
+
+    return df
+
+
+if __name__ == "__main__":
+    from datetime import date, timedelta
+
+    # Example: last 21 days
+    end_date = date.today()
+    start_date = end_date - timedelta(days=30)
+
+    df = fetch_noaa_weather(start_date=start_date.isoformat(), end_date=end_date.isoformat(), save_csv=True)
+    df = fetch_eia_energy(start_date=start_date.isoformat(), end_date=end_date.isoformat(), save_csv=True)
+    print(df.head())  # Optional: preview the data
+
+
+
