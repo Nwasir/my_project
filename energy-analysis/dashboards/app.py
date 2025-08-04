@@ -43,7 +43,7 @@ filtered_df = df[(df["city"].isin(selected_cities)) &
 st.title("Energy + Weather Dashboard")
 st.caption(f"Last updated: {df['date'].max().date()}")
 
-# Show raw data section – now near top
+# Show raw data section
 st.sidebar.markdown("---")
 show_raw_data = st.sidebar.checkbox("📊 Show Raw Data")
 
