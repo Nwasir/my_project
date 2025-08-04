@@ -1,0 +1,58 @@
+2025-08-04 12:42:43,142 - INFO - 🚀 Starting data pipeline...
+2025-08-04 12:42:43,143 - INFO - 📡 Fetching NOAA weather data...
+2025-08-04 12:42:53,139 - INFO - Saved cleaned NOAA weather data to data/raw/weather_2025-05-06_to_2025-08-04.csv
+2025-08-04 12:42:53,140 - INFO - ⚡ Fetching EIA energy data...
+2025-08-04 12:43:07,060 - INFO - Saved EIA energy data to data/raw/energy_2025-05-06_to_2025-08-04.csv
+2025-08-04 12:43:07,062 - INFO - ✅ Successfully fetched data for: ['New York', 'Chicago', 'Houston', 'Phoenix', 'Seattle']
+2025-08-04 12:43:07,064 - INFO - 🧹 Processing and merging data...
+2025-08-04 12:43:07,088 - WARNING - Missing expected columns before conversion: ['TMAX', 'TMIN']. Skipping those.
+2025-08-04 12:43:07,156 - INFO - Processed data saved to data/processed/combined_weather_energy.csv
+2025-08-04 12:43:07,271 - INFO - ✅ Pipeline completed. Data saved to data/processed/merged_2025-05-06_to_2025-08-04.csv
+2025-08-04 12:43:07,271 - INFO - 🔍 Running data quality analysis...
+2025-08-04 12:43:07,298 - INFO - ✅ Data analysis completed.
+2025-08-04 12:43:07,298 - INFO - 📋 Data quality report:
+📊 Rows: 8570, Columns: 10
+
+✅ No missing values detected.
+🌡️ Temperature range: 32.2°C to 32.7°C
+🕒 Latest timestamp: 2025-08-01
+2025-08-04 12:55:01,375 - INFO - 🚀 Starting data pipeline...
+2025-08-04 12:55:01,376 - INFO - 📡 Fetching NOAA weather data...
+2025-08-04 12:55:10,250 - INFO - Saved cleaned NOAA weather data to data/raw/weather_2025-05-06_to_2025-08-04.csv
+2025-08-04 12:55:10,250 - INFO - ⚡ Fetching EIA energy data...
+2025-08-04 12:55:42,080 - INFO - Saved EIA energy data to data/raw/energy_2025-05-06_to_2025-08-04.csv
+2025-08-04 12:55:42,081 - INFO - ✅ Successfully fetched data for: ['New York', 'Chicago', 'Houston', 'Phoenix', 'Seattle']
+2025-08-04 12:55:42,083 - INFO - 🧹 Processing and merging data...
+2025-08-04 12:55:42,105 - WARNING - Missing expected columns before conversion: ['TMAX', 'TMIN']. Skipping those.
+2025-08-04 12:55:42,181 - INFO - Processed data saved to data/processed/combined_weather_energy.csv
+2025-08-04 12:55:42,257 - INFO - ✅ Pipeline completed. Data saved to data/processed/merged_2025-05-06_to_2025-08-04.csv
+2025-08-04 12:55:42,258 - INFO - 🔍 Running data quality analysis...
+2025-08-04 12:55:42,275 - INFO - ✅ Data analysis completed.
+2025-08-04 12:55:42,276 - INFO - 📋 Data quality report:
+📊 Rows: 8570, Columns: 10
+
+✅ No missing values detected.
+🌡️ Temperature range: 32.2°C to 32.7°C
+2025-08-04 17:24:57,417 - INFO - 🚀 Starting data pipeline...
+2025-08-04 17:24:57,417 - INFO - 📡 Fetching NOAA weather data...
+2025-08-04 17:24:57,417 - INFO - Fetching NOAA weather for New York from 2025-05-06 to 2025-08-04
+2025-08-04 17:24:59,427 - INFO - [New York] ✅ Weather data fetched successfully.
+2025-08-04 17:24:59,428 - INFO - Fetching NOAA weather for Chicago from 2025-05-06 to 2025-08-04
+2025-08-04 17:25:01,064 - INFO - [Chicago] ✅ Weather data fetched successfully.
+2025-08-04 17:25:01,065 - INFO - Fetching NOAA weather for Houston from 2025-05-06 to 2025-08-04
+2025-08-04 17:25:02,849 - INFO - [Houston] ✅ Weather data fetched successfully.
+2025-08-04 17:25:02,850 - INFO - Fetching NOAA weather for Phoenix from 2025-05-06 to 2025-08-04
+2025-08-04 17:25:04,586 - INFO - [Phoenix] ✅ Weather data fetched successfully.
+2025-08-04 17:25:04,587 - INFO - Fetching NOAA weather for Seattle from 2025-05-06 to 2025-08-04
+2025-08-04 17:25:06,817 - INFO - [Seattle] ✅ Weather data fetched successfully.
+2025-08-04 17:25:06,848 - INFO - ✅ NOAA weather data saved to data/raw/weather_2025-05-06_to_2025-08-04.csv
+2025-08-04 17:25:06,848 - INFO - ⚡ Fetching EIA energy data...
+2025-08-04 17:25:20,388 - INFO - 🔁 Using monthly retail-sales endpoint for Houston.
+2025-08-04 17:25:41,306 - INFO - ✅ Saved EIA energy data to data/raw/energy_2025-05-06_to_2025-08-04.csv
+2025-08-04 17:25:41,308 - INFO - ✅ Successfully fetched data for: ['New York', 'Chicago', 'Houston', 'Phoenix', 'Seattle']
+2025-08-04 17:25:41,321 - INFO - 🧹 Processing and merging data...
+2025-08-04 17:25:41,368 - ERROR - Error during data processing: time data "2025-05" doesn't match format "%Y-%m-%d", at position 91. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+2025-08-04 17:25:41,369 - WARNING - ⚠️ Pipeline ran, but processed data is empty.

@@ -1,0 +1,5 @@
+📊 Rows: 6870, Columns: 10
+
+✅ No missing values detected.
+🌡️ Temperature range: 32.2°C to 32.7°C
+🕒 Latest timestamp: 2025-08-01

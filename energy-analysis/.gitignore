@@ -34,9 +34,6 @@ env/
 config/
 config.yaml/
 
-# Generated data and logs
-data/
-logs/
 
 # IDE / Editor specific
 .vscode/
