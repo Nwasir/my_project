@@ -29,7 +29,7 @@ wheels/
 venv/
 env/
 
-# Configuration - IMPORTANT
+
 # Keep sensitive API keys out of version control.
 config/config.yaml
 
