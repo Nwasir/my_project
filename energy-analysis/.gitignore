@@ -31,7 +31,7 @@ env/
 
 # Configuration - IMPORTANT
 # Keep sensitive API keys out of version control.
-.env
+config/config.yaml
 
 # Generated data and logs
 data/
