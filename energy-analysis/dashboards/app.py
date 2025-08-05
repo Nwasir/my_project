@@ -43,7 +43,7 @@ selected_cities = st.sidebar.multiselect("Select Cities", cities, default=cities
 date_range = st.sidebar.date_input("Date Range", [df["date"].min(), df["date"].max()])
 
 filtered_df = df[(df["city"].isin(selected_cities)) & 
-                 (df["date"].between(pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])))]
+                 (df["date"].between(pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])))].copy()
 
 # Title
 st.title("Energy + Weather Dashboard")
